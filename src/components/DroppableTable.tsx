@@ -90,11 +90,11 @@ export const DroppableTable: React.FC<TableProps> = ({
       minWidth={150}
       minHeight={100}
       bounds="parent"
-      className={`bg-white border shadow-lg rounded-xl overflow-hidden ${
+      className={`bg-white border shadow-lg rounded-xl overflow-hidden relative ${
         isGlowing ? "border-glow" : ""
       }`}
     >
-      <div ref={tableRef} className="relative">
+      <div ref={tableRef}>
         <div className="flex p-3">
           <h3 className="flex text-sm font-bold flex-grow items-start">
             <img
@@ -139,6 +139,7 @@ export const DroppableTable: React.FC<TableProps> = ({
                 data-column-id={col.column_id}
                 draggable
                 onDragStart={(e) => handleColumnDragStart(e, col)}
+                onDragOver={(e) => e.preventDefault()} 
                 onDrop={(e) => handleColumnDrop(e, col)}
                 className="p-1 border"
               >
