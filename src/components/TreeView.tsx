@@ -18,7 +18,7 @@ export const TreeView: React.FC<TreeProps> = ({ tables, onDragStart }) => {
       {tables.map((table) => (
         <div key={table.id} className="mb-2">
           <div
-            className="flex items-center justify-between cursor-pointer py-2 px-4 bg-gray-100"
+            className="flex items-center justify-between cursor-pointer py-2 px-4"
             onClick={() => togglePanel(table.id)}
             draggable
             onDragStart={(e) => onDragStart(e, table)}

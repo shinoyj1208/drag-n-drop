@@ -11,25 +11,31 @@ interface TableProps {
   table: TableType;
   onRemove: (id: string) => void;
   addConnection: (from: Connection["from"], to: Connection["to"]) => void;
+  updateColumnPositions: (
+    tableId: string,
+    positions: { [key: string]: Position }
+  ) => void;
   isGlowing: boolean;
+  columnPositions: { [key: string]: { [key: string]: Position } };
 }
 
 export const DroppableTable: React.FC<TableProps> = ({
   table,
   onRemove,
   addConnection,
+  updateColumnPositions,
   isGlowing,
+  columnPositions,
 }) => {
   const tableRef = useRef<HTMLDivElement>(null);
-  const [columnPositions, setColumnPositions] = useState<{
-    [key: string]: Position;
-  }>({});
+  const [isDraggingColumn, setIsDraggingColumn] = useState(false);
 
   const handleColumnDragStart = (
     e: DragEvent<HTMLTableRowElement>,
     column: Column
   ) => {
     e.stopPropagation();
+    setIsDraggingColumn(true);
     e.dataTransfer.setData(
       "column",
       JSON.stringify({ ...column, tableId: table.id })
@@ -40,37 +46,61 @@ export const DroppableTable: React.FC<TableProps> = ({
     e: DragEvent<HTMLTableRowElement>,
     targetColumn: Column
   ) => {
+    e.preventDefault();
     e.stopPropagation();
-    const sourceColumn: Column & { tableId: string } = JSON.parse(
-      e.dataTransfer.getData("column")
-    );
-    const targetPosition = columnPositions[targetColumn.column_id];
-    const sourcePosition = columnPositions[sourceColumn.column_id];
+    setIsDraggingColumn(false);
+    const sourceColumn: Column & { tableId: string } =
+      e.dataTransfer.getData("column") &&
+      JSON.parse(e.dataTransfer.getData("column"));
+    if (sourceColumn.tableId === table.id) return;
+    const sourcePosition =
+      columnPositions[sourceColumn.tableId]?.[sourceColumn.column_id];
+    const targetPosition = columnPositions[table.id]?.[targetColumn.column_id];
+    if (sourcePosition && targetPosition) {
+      addConnection(
+        {
+          ...sourceColumn,
+          x: sourcePosition.x,
+          y: sourcePosition.y,
+          width: sourcePosition.width,
+          left: sourcePosition.left,
+          right: sourcePosition.right,
+        },
+        {
+          ...targetColumn,
+          tableId: table.id,
+          x: targetPosition.x,
+          y: targetPosition.y,
+          width: targetPosition.width,
+          left: targetPosition.left,
+          right: targetPosition.right,
+        }
+      );
+    }
+  };
 
-    addConnection(
-      { ...sourceColumn, ...sourcePosition },
-      { ...targetColumn, tableId: table.id, ...targetPosition }
-    );
+  const updatePositions = () => {
+    const positions: { [key: string]: Position } = {};
+
+    table.columns.forEach((col) => {
+      const element = tableRef.current?.querySelector(
+        `[data-column-id='${col.column_id}_${table.id}']`
+      );
+      if (element) {
+        const rect = element.getBoundingClientRect();        
+        positions[col.column_id] = {
+          x: rect.x - 65,
+          y: rect.y - 20,
+          width: rect.width,
+          left: rect.left,
+          right: rect.right,
+        };
+      }
+    });
+    updateColumnPositions(table.id, positions);
   };
 
   useEffect(() => {
-    const updatePositions = () => {
-      const positions: { [key: string]: Position } = {};
-      table.columns.forEach((col) => {
-        const element = tableRef.current?.querySelector(
-          `[data-column-id='${col.column_id}']`
-        );
-        if (element) {
-          const rect = element.getBoundingClientRect();
-          positions[col.column_id] = {
-            x: rect.left + rect.width / 2,
-            y: rect.top + rect.height / 2,
-          };
-        }
-      });
-      setColumnPositions(positions);
-    };
-
     updatePositions();
     window.addEventListener("resize", updatePositions);
 
@@ -87,15 +117,21 @@ export const DroppableTable: React.FC<TableProps> = ({
         width: 320,
         height: 200,
       }}
-      minWidth={150}
-      minHeight={100}
+      minWidth={320}
+      minHeight={200}
       bounds="parent"
       className={`bg-white border shadow-lg rounded-xl overflow-hidden relative ${
         isGlowing ? "border-glow" : ""
       }`}
+      onDrag={updatePositions}
+      onDragStart={updatePositions}
+      onDragStop={updatePositions}
+      onResize={updatePositions}
+      dragHandleClassName="drag-handle"
+      enableResizing={!isDraggingColumn}
     >
       <div ref={tableRef}>
-        <div className="flex p-3">
+        <div className="flex p-3 drag-handle">
           <h3 className="flex text-sm font-bold flex-grow items-start">
             <img
               className="mt-1 mr-2"
@@ -136,10 +172,11 @@ export const DroppableTable: React.FC<TableProps> = ({
             {table.columns.map((col) => (
               <tr
                 key={col.column_id}
-                data-column-id={col.column_id}
+                data-column-id={`${col.column_id}_${table.id}`}
                 draggable
+                onClick={() => setIsDraggingColumn(false)}
                 onDragStart={(e) => handleColumnDragStart(e, col)}
-                onDragOver={(e) => e.preventDefault()} 
+                onDragOver={() => setIsDraggingColumn(false)}
                 onDrop={(e) => handleColumnDrop(e, col)}
                 className="p-1 border"
               >

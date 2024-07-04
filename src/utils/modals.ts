@@ -18,4 +18,7 @@ export interface Connection {
 export interface Position {
   x: number;
   y: number;
+  width: number;
+  left: number;
+  right: number;
 }
