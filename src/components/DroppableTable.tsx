@@ -90,7 +90,7 @@ export const DroppableTable: React.FC<TableProps> = ({
         const rect = element.getBoundingClientRect();        
         positions[col.column_id] = {
           x: rect.x - 65,
-          y: rect.y - 20,
+          y: rect.y - 35,
           width: rect.width,
           left: rect.left,
           right: rect.right,
